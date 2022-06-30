@@ -10,6 +10,7 @@ import android.content.Intent
 import androidx.appcompat.app.AlertDialog
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.widget.SearchView
 
 const val EXTRA_TASK = "jp.techacademy.kojo.taskapp.TASK"
 
@@ -31,7 +32,18 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this, InputActivity::class.java)
             startActivity(intent)
         }
+    search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextChange(newText: String): Boolean {
+                // text changed
+                findCategory(newText)
+                return true
 
+            }
+            override fun onQueryTextSubmit(query: String): Boolean {
+                // submit button pressed
+                return false
+            }
+    })
         // Realmの設定
         mRealm = Realm.getDefaultInstance()
         mRealm.addChangeListener(mRealmListener)
@@ -47,7 +59,6 @@ class MainActivity : AppCompatActivity() {
             intent.putExtra(EXTRA_TASK, task.id)
             startActivity(intent)
         }
-
         // ListViewを長押ししたときの処理
         listView1.setOnItemLongClickListener { parent, _, position, _ ->
             // タスクを削除する
@@ -91,9 +102,24 @@ class MainActivity : AppCompatActivity() {
         reloadListView()
     }
 
+
     private fun reloadListView() {
         // Realmデータベースから、「すべてのデータを取得して新しい日時順に並べた結果」を取得
         val taskRealmResults = mRealm.where(Task::class.java).findAll().sort("date", Sort.DESCENDING)
+
+        // 上記の結果を、TaskListとしてセットする
+        mTaskAdapter.mTaskList = mRealm.copyFromRealm(taskRealmResults)
+
+        // TaskのListView用のアダプタに渡す
+        listView1.adapter = mTaskAdapter
+
+        // 表示を更新するために、アダプターにデータが変更されたことを知らせる
+        mTaskAdapter.notifyDataSetChanged()
+
+    }
+    private fun findCategory(text: String) {
+
+        val taskRealmResults = mRealm.where(Task::class.java).contains("category", text).findAll().sort("date", Sort.DESCENDING)
 
         // 上記の結果を、TaskListとしてセットする
         mTaskAdapter.mTaskList = mRealm.copyFromRealm(taskRealmResults)
